@@ -178,6 +178,21 @@ export default {
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     },
+    migrateDefaultHabitsToUserHabits(defaultHabits) {
+      const userHabits = this.loadUserHabits();
+      const existingIds = new Set(userHabits.map(h => h.id));
+      
+      defaultHabits.forEach(habit => {
+        if (!existingIds.has(habit.id)) {
+          userHabits.push({
+            ...habit,
+            deletable: true
+          });
+        }
+      });
+      
+      this.saveUserHabits(userHabits);
+    },
     loadDefaultHabits() {
       const stored = localStorage.getItem('defaultHabits');
       if (stored) {
@@ -196,22 +211,6 @@ export default {
     },
     saveDefaultHabits() {
       localStorage.setItem('defaultHabits', JSON.stringify(this.defaultHabits));
-    },
-    migrateDefaultHabitsToUserHabits(defaultHabits) {
-      // Convert default habits to user habits (making them deletable)
-      const migratedHabits = defaultHabits.map(habit => ({
-        ...habit,
-        isDefault: false
-      }));
-      
-      // Add them to user habits if they don't already exist
-      const existingUserHabitIds = this.userHabits.map(h => h.id);
-      const newUserHabits = migratedHabits.filter(habit => 
-        !existingUserHabitIds.includes(habit.id)
-      );
-      
-      this.userHabits.push(...newUserHabits);
-      this.saveUserHabits();
     },
     loadHabits() {
       const stored = localStorage.getItem('habits');
@@ -236,12 +235,12 @@ export default {
           return item;
         }) : [];
     },
-    saveUserHabits() {
-      const habitData = this.userHabits.map(habit => ({
+    saveUserHabits(habits) {
+      const habitData = habits.map(habit => ({
         id: habit.id,
         name: habit.name,
         active: habit.active,
-        isDefault: false
+        isDefault: habit.isDefault
       }));
       localStorage.setItem('userHabits', JSON.stringify(habitData));
     },
@@ -252,7 +251,7 @@ export default {
         active: true,
         isDefault: false
       });
-      this.saveUserHabits();
+      this.saveUserHabits(this.userHabits);
     },
     hasCompletionHistory(habitId) {
       return Object.values(this.habits).some(dayData => habitId in dayData);
@@ -273,7 +272,7 @@ export default {
         const habit = this.userHabits.find(h => h.id === updatedHabit.id);
         if (habit) {
           habit.name = updatedHabit.name;
-          this.saveUserHabits();
+          this.saveUserHabits(this.userHabits);
         }
       }
       this.showEditModal = false;
@@ -290,7 +289,7 @@ export default {
         const userHabit = this.userHabits.find(h => h.id === habit.id);
         if (userHabit) {
           userHabit.active = !userHabit.active;
-          this.saveUserHabits();
+          this.saveUserHabits(this.userHabits);
         }
       }
       this.showMenuForHabit = null;
@@ -303,7 +302,7 @@ export default {
       } else {
         // Remove from user habits
         this.userHabits = this.userHabits.filter(h => h.id !== habit.id);
-        this.saveUserHabits();
+        this.saveUserHabits(this.userHabits);
       }
       
       // Remove all completion records for this habit
@@ -421,6 +420,21 @@ export default {
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     },
+    migrateDefaultHabitsToUserHabits(defaultHabits) {
+      const userHabits = this.loadUserHabits();
+      const existingIds = new Set(userHabits.map(h => h.id));
+      
+      defaultHabits.forEach(habit => {
+        if (!existingIds.has(habit.id)) {
+          userHabits.push({
+            ...habit,
+            deletable: true
+          });
+        }
+      });
+      
+      this.saveUserHabits(userHabits);
+    },
     loadDefaultHabits() {
       const stored = localStorage.getItem('defaultHabits');
       if (stored) {
@@ -463,12 +477,12 @@ export default {
           return item;
         }) : [];
     },
-    saveUserHabits() {
-      const habitData = this.userHabits.map(habit => ({
+    saveUserHabits(habits) {
+      const habitData = habits.map(habit => ({
         id: habit.id,
         name: habit.name,
         active: habit.active,
-        isDefault: false
+        isDefault: habit.isDefault
       }));
       localStorage.setItem('userHabits', JSON.stringify(habitData));
     },
@@ -479,7 +493,7 @@ export default {
         active: true,
         isDefault: false
       });
-      this.saveUserHabits();
+      this.saveUserHabits(this.userHabits);
     },
     hasCompletionHistory(habitId) {
       return Object.values(this.habits).some(dayData => habitId in dayData);
@@ -500,7 +514,7 @@ export default {
         const habit = this.userHabits.find(h => h.id === updatedHabit.id);
         if (habit) {
           habit.name = updatedHabit.name;
-          this.saveUserHabits();
+          this.saveUserHabits(this.userHabits);
         }
       }
       this.showEditModal = false;
@@ -517,7 +531,7 @@ export default {
         const userHabit = this.userHabits.find(h => h.id === habit.id);
         if (userHabit) {
           userHabit.active = !userHabit.active;
-          this.saveUserHabits();
+          this.saveUserHabits(this.userHabits);
         }
       }
       this.showMenuForHabit = null;
@@ -530,7 +544,7 @@ export default {
       } else {
         // Remove from user habits
         this.userHabits = this.userHabits.filter(h => h.id !== habit.id);
-        this.saveUserHabits();
+        this.saveUserHabits(this.userHabits);
       }
       
       // Remove all completion records for this habit
