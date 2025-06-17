@@ -5,7 +5,7 @@
         <h2>Edit Habit</h2>
         <button class="close-button" @click="closeModal">&times;</button>
       </div>
-      
+
       <div class="modal-body">
         <form @submit.prevent="handleSubmit">
           <div class="form-group">
@@ -15,13 +15,13 @@
               id="habitName"
               v-model="habitName"
               ref="habitNameInput"
-              :class="{ 'error': error }"
+              :class="{ error: error }"
               placeholder="Enter habit name"
               @input="error = ''"
-            >
+            />
             <div v-if="error" class="error-message">{{ error }}</div>
           </div>
-          
+
           <div class="modal-footer">
             <button type="button" class="btn-secondary" @click="closeModal">Cancel</button>
             <button type="submit" class="btn-primary">Save Changes</button>
@@ -40,16 +40,16 @@ export default {
   props: {
     modelValue: {
       type: Boolean,
-      required: true
+      required: true,
     },
     habit: {
       type: Object,
-      required: true
+      required: true,
     },
     existingHabits: {
       type: Array,
-      required: true
-    }
+      required: true,
+    },
   },
   emits: ['update:modelValue', 'habit-updated'],
   setup(props, { emit }) {
@@ -57,14 +57,17 @@ export default {
     const error = ref('')
     const habitNameInput = ref(null)
 
-    watch(() => props.modelValue, (newVal) => {
-      if (newVal) {
-        habitName.value = props.habit.name
-        nextTick(() => {
-          habitNameInput.value?.focus()
-        })
-      }
-    })
+    watch(
+      () => props.modelValue,
+      (newVal) => {
+        if (newVal) {
+          habitName.value = props.habit.name
+          nextTick(() => {
+            habitNameInput.value?.focus()
+          })
+        }
+      },
+    )
 
     const closeModal = () => {
       habitName.value = ''
@@ -74,18 +77,18 @@ export default {
 
     const handleSubmit = () => {
       const name = habitName.value.trim()
-      
+
       if (!name) {
         error.value = 'Habit name is required'
         return
       }
-      
-      const otherHabits = props.existingHabits.filter(h => h !== props.habit.name)
+
+      const otherHabits = props.existingHabits.filter((h) => h !== props.habit.name)
       if (otherHabits.includes(name)) {
         error.value = 'This habit name already exists'
         return
       }
-      
+
       emit('habit-updated', { ...props.habit, name })
       closeModal()
     }
@@ -95,9 +98,9 @@ export default {
       error,
       habitNameInput,
       closeModal,
-      handleSubmit
+      handleSubmit,
     }
-  }
+  },
 }
 </script>
 
@@ -200,7 +203,7 @@ export default {
 
 .form-group input:focus {
   outline: none;
-  border-color: #4CAF50;
+  border-color: #4caf50;
   box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
 }
 
@@ -221,7 +224,8 @@ export default {
   gap: 0.75rem;
 }
 
-.btn-primary, .btn-secondary {
+.btn-primary,
+.btn-secondary {
   padding: 0.75rem 1rem;
   border-radius: 4px;
   cursor: pointer;
@@ -233,7 +237,7 @@ export default {
 }
 
 .btn-primary {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
 }
 
@@ -272,7 +276,8 @@ export default {
     gap: 0.5rem;
   }
 
-  .btn-primary, .btn-secondary {
+  .btn-primary,
+  .btn-secondary {
     width: auto;
     padding: 0.5rem 1rem;
   }

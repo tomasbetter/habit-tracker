@@ -20,11 +20,11 @@ import { RouterView } from 'vue-router'
 }
 
 header {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
   padding: 0.75rem;
   text-align: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 header h1 {

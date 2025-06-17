@@ -7,11 +7,11 @@
         <span class="month-display">{{ currentMonthYear }}</span>
         <button @click="navigateMonth(1)" class="month-nav-btn">›</button>
       </div>
-      
+
       <!-- Week navigation around current date -->
       <div class="nav-buttons">
-        <button 
-          v-for="offset in weekOffsets" 
+        <button
+          v-for="offset in weekOffsets"
           :key="offset"
           :class="{ active: isActiveDay(offset) }"
           @click="navigateToDay(offset)"
@@ -20,14 +20,14 @@
           {{ formatDayButton(offset) }}
         </button>
       </div>
-      
+
       <!-- Quick navigation options -->
       <div class="quick-nav">
         <button @click="goToToday" class="quick-nav-btn">Today</button>
         <button @click="navigateWeeks(-1)" class="quick-nav-btn">← Week</button>
         <button @click="navigateWeeks(1)" class="quick-nav-btn">Week →</button>
       </div>
-      
+
       <div class="current-date">
         {{ formatCurrentDate }}
       </div>
@@ -35,29 +35,27 @@
 
     <div class="habit-list-header">
       <h2>My Habits</h2>
-      <button class="add-habit-btn" @click="showAddModal = true">
-        + Add Habit
-      </button>
+      <button class="add-habit-btn" @click="showAddModal = true">+ Add Habit</button>
     </div>
 
     <div class="habit-list">
-      <div 
-        v-for="habit in allHabits" 
-        :key="habit.id" 
+      <div
+        v-for="habit in allHabits"
+        :key="habit.id"
         class="habit-item"
-        :class="{ 'inactive': !habit.active }"
+        :class="{ inactive: !habit.active }"
       >
         <div class="habit-content">
           <label :class="{ disabled: isFutureDate }">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               :checked="isHabitCompleted(habit.id)"
               @change="toggleHabit(habit.id)"
               :disabled="isFutureDate"
-            >
+            />
             {{ habit.name }}
           </label>
-          
+
           <HabitActionMenu
             :show-menu="showMenuForHabit === habit.id"
             :habit="habit"
@@ -66,7 +64,7 @@
             @stop="handleHabitStop(habit)"
             @delete="handleHabitDelete(habit)"
           >
-            <button 
+            <button
               class="action-button"
               @click="showMenuForHabit = showMenuForHabit === habit.id ? null : habit.id"
             >
@@ -80,559 +78,280 @@
         v-if="selectedHabit"
         v-model="showEditModal"
         :habit="selectedHabit"
-        :existing-habits="allHabits.map(h => h.name)"
+        :existing-habits="allHabits.map((h) => h.name)"
         @habit-updated="handleHabitEdit"
-        @update:modelValue="val => { if (!val) selectedHabit = null }"
+        @update:modelValue="
+          (val) => {
+            if (!val) selectedHabit = null
+          }
+        "
       />
     </div>
 
     <AddHabitModal
       v-model="showAddModal"
-      :existing-habits="allHabits.map(h => h.name)"
+      :existing-habits="allHabits.map((h) => h.name)"
       @habit-added="handleHabitAdded"
     />
 
-    <div v-if="isFutureDate" class="future-date-message">
-      Cannot mark habits for future dates
-    </div>
+    <div v-if="isFutureDate" class="future-date-message">Cannot mark habits for future dates</div>
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AddHabitModal from '../components/AddHabitModal.vue'
 import EditHabitModal from '../components/EditHabitModal.vue'
 import HabitActionMenu from '../components/HabitActionMenu.vue'
 
-export default {
-  name: 'DayView',
-  components: {
-    AddHabitModal,
-    EditHabitModal,
-    HabitActionMenu
-  },
-  data() {
-    return {
-      showAddModal: false,
-      showEditModal: false,
-      selectedHabit: null,
-      showMenuForHabit: null,
-      habits: this.loadHabits(),
-      userHabits: this.loadUserHabits(),
-      defaultHabits: this.loadDefaultHabits(),
-      windowWidth: window.innerWidth
-    }
-  },
-  computed: {
-    allHabits() {
-      return [...this.defaultHabits, ...this.userHabits].filter(habit => 
-        habit.active || this.hasCompletionHistory(habit.id)
-      );
-    },
-    currentDate() {
-      const dateParam = this.$route.params.date;
-      const date = dateParam ? new Date(dateParam) : new Date();
-      return this.normalizeDate(date);
-    },
-    formatCurrentDate() {
-      return this.currentDate.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    },
-    isFutureDate() {
-      const today = this.normalizeDate(new Date());
-      return this.currentDate.getTime() > today.getTime();
-    },
-    dateKey() {
-      return this.formatDateKey(this.currentDate);
-    },
-    currentMonthYear() {
-      return this.currentDate.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long'
-      });
-    },
-    weekOffsets() {
-      const offsets = [];
-      for (let i = -3; i <= 3; i++) {
-        offsets.push(i);
-      }
-      return offsets;
-    },
-    isDesktop() {
-      return this.windowWidth >= 768;
-    }
-  },
-  methods: {
-    normalizeDate(date) {
-      const normalized = new Date(date);
-      normalized.setHours(0, 0, 0, 0);
-      return normalized;
-    },
-    formatDateKey(date) {
-      // Use local timezone instead of UTC to avoid timezone issues
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    },
-    migrateDefaultHabitsToUserHabits(defaultHabits) {
-      const userHabits = this.loadUserHabits();
-      const existingIds = new Set(userHabits.map(h => h.id));
-      
-      defaultHabits.forEach(habit => {
-        if (!existingIds.has(habit.id)) {
-          userHabits.push({
-            ...habit,
-            deletable: true
-          });
-        }
-      });
-      
-      this.saveUserHabits(userHabits);
-    },
-    loadDefaultHabits() {
-      const stored = localStorage.getItem('defaultHabits');
-      if (stored) {
-        const defaultHabits = JSON.parse(stored);
-        // Migrate existing default habits to user habits for backwards compatibility
-        if (defaultHabits.length > 0) {
-          this.migrateDefaultHabitsToUserHabits(defaultHabits);
-          // Clear default habits from localStorage
-          localStorage.removeItem('defaultHabits');
-        }
-        return [];
-      }
-      
-      // No initial default habits - all habits are user-created and deletable
-      return [];
-    },
-    saveDefaultHabits() {
-      localStorage.setItem('defaultHabits', JSON.stringify(this.defaultHabits));
-    },
-    loadHabits() {
-      const stored = localStorage.getItem('habits');
-      return stored ? JSON.parse(stored) : {};
-    },
-    loadUserHabits() {
-      const stored = localStorage.getItem('userHabits');
-      if (!stored) return [];
-      
-      const data = JSON.parse(stored);
-      // Handle both old format (array of names) and new format (array of objects)
-      return Array.isArray(data) ? 
-        data.map(item => {
-          if (typeof item === 'string') {
-            return {
-              id: item.toLowerCase().replace(/\s+/g, '-'),
-              name: item,
-              active: true,
-              isDefault: false
-            };
-          }
-          return item;
-        }) : [];
-    },
-    saveUserHabits(habits) {
-      const habitData = habits.map(habit => ({
-        id: habit.id,
-        name: habit.name,
-        active: habit.active,
-        isDefault: habit.isDefault
-      }));
-      localStorage.setItem('userHabits', JSON.stringify(habitData));
-    },
-    handleHabitAdded(habitName) {
-      this.userHabits.push({
-        id: habitName.toLowerCase().replace(/\s+/g, '-'),
-        name: habitName,
-        active: true,
-        isDefault: false
-      });
-      this.saveUserHabits(this.userHabits);
-    },
-    hasCompletionHistory(habitId) {
-      return Object.values(this.habits).some(dayData => habitId in dayData);
-    },
-    handleHabitEditStart(habit) {
-      this.selectedHabit = habit;
-      this.showEditModal = true;
-      this.showMenuForHabit = null;
-    },
-    handleHabitEdit(updatedHabit) {
-      if (updatedHabit.isDefault) {
-        const habit = this.defaultHabits.find(h => h.id === updatedHabit.id);
-        if (habit) {
-          habit.name = updatedHabit.name;
-          this.saveDefaultHabits();
-        }
-      } else {
-        const habit = this.userHabits.find(h => h.id === updatedHabit.id);
-        if (habit) {
-          habit.name = updatedHabit.name;
-          this.saveUserHabits(this.userHabits);
-        }
-      }
-      this.showEditModal = false;
-      this.selectedHabit = null;
-    },
-    handleHabitStop(habit) {
-      if (habit.isDefault) {
-        const defaultHabit = this.defaultHabits.find(h => h.id === habit.id);
-        if (defaultHabit) {
-          defaultHabit.active = !defaultHabit.active;
-          this.saveDefaultHabits();
-        }
-      } else {
-        const userHabit = this.userHabits.find(h => h.id === habit.id);
-        if (userHabit) {
-          userHabit.active = !userHabit.active;
-          this.saveUserHabits(this.userHabits);
-        }
-      }
-      this.showMenuForHabit = null;
-    },
-    handleHabitDelete(habit) {
-      if (habit.isDefault) {
-        // Remove from default habits
-        this.defaultHabits = this.defaultHabits.filter(h => h.id !== habit.id);
-        this.saveDefaultHabits();
-      } else {
-        // Remove from user habits
-        this.userHabits = this.userHabits.filter(h => h.id !== habit.id);
-        this.saveUserHabits(this.userHabits);
-      }
-      
-      // Remove all completion records for this habit
-      Object.keys(this.habits).forEach(date => {
-        if (this.habits[date][habit.id]) {
-          delete this.habits[date][habit.id];
-          if (Object.keys(this.habits[date]).length === 0) {
-            delete this.habits[date];
+const route = useRoute()
+const router = useRouter()
+
+// State
+const showAddModal = ref(false)
+const showEditModal = ref(false)
+const selectedHabit = ref(null)
+const showMenuForHabit = ref(null)
+const habits = ref(loadHabits())
+const userHabits = ref(loadUserHabits())
+const defaultHabits = ref(loadDefaultHabits())
+
+// Methods
+function loadHabits() {
+  const stored = localStorage.getItem('habits')
+  return stored ? JSON.parse(stored) : {}
+}
+
+function loadUserHabits() {
+  const stored = localStorage.getItem('userHabits')
+  if (!stored) return []
+
+  const data = JSON.parse(stored)
+  return Array.isArray(data)
+    ? data.map((item) => {
+        if (typeof item === 'string') {
+          return {
+            id: item.toLowerCase().replace(/\s+/g, '-'),
+            name: item,
+            active: true,
+            isDefault: false,
           }
         }
-      });
-      this.saveHabits();
-      this.showMenuForHabit = null;
-    },
-    saveHabits() {
-      localStorage.setItem('habits', JSON.stringify(this.habits));
-    },
-    isHabitCompleted(habitId) {
-      return this.habits[this.dateKey]?.[habitId] || false;
-    },
-    toggleHabit(habitId) {
-      if (this.isFutureDate) return;
-      
-      if (!this.habits[this.dateKey]) {
-        this.habits[this.dateKey] = {};
-      }
-      
-      this.habits[this.dateKey][habitId] = !this.isHabitCompleted(habitId);
-      this.saveHabits();
-    },
-    navigateToDay(daysOffset) {
-      const date = new Date(this.currentDate);
-      date.setDate(date.getDate() + daysOffset);
-      const dateString = this.formatDateKey(date);
-      this.$router.push(`/day/${dateString}`);
-    },
-    isActiveDay(daysOffset) {
-      return daysOffset === 0;
-    },
-    formatDayButton(daysOffset) {
-      const date = new Date(this.currentDate);
-      date.setDate(date.getDate() + daysOffset);
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(today.getDate() - 1);
-      
-      if (this.normalizeDate(date).getTime() === this.normalizeDate(today).getTime()) {
-        return 'Today';
-      }
-      if (this.normalizeDate(date).getTime() === this.normalizeDate(yesterday).getTime()) {
-        return this.isDesktop ? 'Yesterday' : 'Yest';
-      }
-      
-      if (this.isDesktop) {
-        // Full format for desktop
-        return date.toLocaleDateString('en-US', {
-          weekday: 'short',
-          month: 'numeric',
-          day: 'numeric'
-        });
-      } else {
-        // Very compact format for mobile
-        const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
-        const day = date.getDate();
-        
-        // Use format like "M4", "T5", "W6" for mobile
-        return `${weekday.charAt(0)}${day}`;
-      }
-    },
-    navigateMonth(monthsAgo) {
-      const date = new Date(this.currentDate);
-      date.setMonth(this.currentDate.getMonth() + monthsAgo);
-      const dateString = this.formatDateKey(date);
-      this.$router.push(`/day/${dateString}`);
-    },
-    goToToday() {
-      const today = new Date();
-      const dateString = this.formatDateKey(today);
-      this.$router.push(`/day/${dateString}`);
-    },
-    navigateWeeks(weeksAgo) {
-      const date = new Date(this.currentDate);
-      date.setDate(this.currentDate.getDate() + weeksAgo * 7);
-      const dateString = this.formatDateKey(date);
-      this.$router.push(`/day/${dateString}`);
+        return item
+      })
+    : []
+}
+
+function loadDefaultHabits() {
+  const stored = localStorage.getItem('defaultHabits')
+  if (stored) {
+    const defaultHabitsList = JSON.parse(stored)
+    if (defaultHabitsList.length > 0) {
+      migrateDefaultHabitsToUserHabits(defaultHabitsList)
+      localStorage.removeItem('defaultHabits')
     }
-  },
-  watch: {
-    '$route.params.date': {
-      handler() {
-        this.habits = this.loadHabits();
-      },
-      immediate: true
+    return []
+  }
+  return []
+}
+
+function migrateDefaultHabitsToUserHabits(defaultHabits) {
+  const userHabitsList = loadUserHabits()
+  const existingIds = new Set(userHabitsList.map((h) => h.id))
+
+  defaultHabits.forEach((habit) => {
+    if (!existingIds.has(habit.id)) {
+      userHabitsList.push({
+        ...habit,
+        deletable: true,
+      })
     }
-  },
-  mounted() {
-    window.addEventListener('resize', this.handleResize);
-  },
-  beforeUnmount() {
-    window.removeEventListener('resize', this.handleResize);
-  },
-  methods: {
-    handleResize() {
-      this.windowWidth = window.innerWidth;
-    },
-    normalizeDate(date) {
-      const normalized = new Date(date);
-      normalized.setHours(0, 0, 0, 0);
-      return normalized;
-    },
-    formatDateKey(date) {
-      // Use local timezone instead of UTC to avoid timezone issues
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    },
-    migrateDefaultHabitsToUserHabits(defaultHabits) {
-      const userHabits = this.loadUserHabits();
-      const existingIds = new Set(userHabits.map(h => h.id));
-      
-      defaultHabits.forEach(habit => {
-        if (!existingIds.has(habit.id)) {
-          userHabits.push({
-            ...habit,
-            deletable: true
-          });
-        }
-      });
-      
-      this.saveUserHabits(userHabits);
-    },
-    loadDefaultHabits() {
-      const stored = localStorage.getItem('defaultHabits');
-      if (stored) {
-        const defaultHabits = JSON.parse(stored);
-        // Migrate existing default habits to user habits for backwards compatibility
-        if (defaultHabits.length > 0) {
-          this.migrateDefaultHabitsToUserHabits(defaultHabits);
-          // Clear default habits from localStorage
-          localStorage.removeItem('defaultHabits');
-        }
-        return [];
-      }
-      
-      // No initial default habits - all habits are user-created and deletable
-      return [];
-    },
-    saveDefaultHabits() {
-      localStorage.setItem('defaultHabits', JSON.stringify(this.defaultHabits));
-    },
-    loadHabits() {
-      const stored = localStorage.getItem('habits');
-      return stored ? JSON.parse(stored) : {};
-    },
-    loadUserHabits() {
-      const stored = localStorage.getItem('userHabits');
-      if (!stored) return [];
-      
-      const data = JSON.parse(stored);
-      // Handle both old format (array of names) and new format (array of objects)
-      return Array.isArray(data) ? 
-        data.map(item => {
-          if (typeof item === 'string') {
-            return {
-              id: item.toLowerCase().replace(/\s+/g, '-'),
-              name: item,
-              active: true,
-              isDefault: false
-            };
-          }
-          return item;
-        }) : [];
-    },
-    saveUserHabits(habits) {
-      const habitData = habits.map(habit => ({
-        id: habit.id,
-        name: habit.name,
-        active: habit.active,
-        isDefault: habit.isDefault
-      }));
-      localStorage.setItem('userHabits', JSON.stringify(habitData));
-    },
-    handleHabitAdded(habitName) {
-      this.userHabits.push({
-        id: habitName.toLowerCase().replace(/\s+/g, '-'),
-        name: habitName,
-        active: true,
-        isDefault: false
-      });
-      this.saveUserHabits(this.userHabits);
-    },
-    hasCompletionHistory(habitId) {
-      return Object.values(this.habits).some(dayData => habitId in dayData);
-    },
-    handleHabitEditStart(habit) {
-      this.selectedHabit = habit;
-      this.showEditModal = true;
-      this.showMenuForHabit = null;
-    },
-    handleHabitEdit(updatedHabit) {
-      if (updatedHabit.isDefault) {
-        const habit = this.defaultHabits.find(h => h.id === updatedHabit.id);
-        if (habit) {
-          habit.name = updatedHabit.name;
-          this.saveDefaultHabits();
-        }
-      } else {
-        const habit = this.userHabits.find(h => h.id === updatedHabit.id);
-        if (habit) {
-          habit.name = updatedHabit.name;
-          this.saveUserHabits(this.userHabits);
-        }
-      }
-      this.showEditModal = false;
-      this.selectedHabit = null;
-    },
-    handleHabitStop(habit) {
-      if (habit.isDefault) {
-        const defaultHabit = this.defaultHabits.find(h => h.id === habit.id);
-        if (defaultHabit) {
-          defaultHabit.active = !defaultHabit.active;
-          this.saveDefaultHabits();
-        }
-      } else {
-        const userHabit = this.userHabits.find(h => h.id === habit.id);
-        if (userHabit) {
-          userHabit.active = !userHabit.active;
-          this.saveUserHabits(this.userHabits);
-        }
-      }
-      this.showMenuForHabit = null;
-    },
-    handleHabitDelete(habit) {
-      if (habit.isDefault) {
-        // Remove from default habits
-        this.defaultHabits = this.defaultHabits.filter(h => h.id !== habit.id);
-        this.saveDefaultHabits();
-      } else {
-        // Remove from user habits
-        this.userHabits = this.userHabits.filter(h => h.id !== habit.id);
-        this.saveUserHabits(this.userHabits);
-      }
-      
-      // Remove all completion records for this habit
-      Object.keys(this.habits).forEach(date => {
-        if (this.habits[date][habit.id]) {
-          delete this.habits[date][habit.id];
-          if (Object.keys(this.habits[date]).length === 0) {
-            delete this.habits[date];
-          }
-        }
-      });
-      this.saveHabits();
-      this.showMenuForHabit = null;
-    },
-    saveHabits() {
-      localStorage.setItem('habits', JSON.stringify(this.habits));
-    },
-    isHabitCompleted(habitId) {
-      return this.habits[this.dateKey]?.[habitId] || false;
-    },
-    toggleHabit(habitId) {
-      if (this.isFutureDate) return;
-      
-      if (!this.habits[this.dateKey]) {
-        this.habits[this.dateKey] = {};
-      }
-      
-      this.habits[this.dateKey][habitId] = !this.isHabitCompleted(habitId);
-      this.saveHabits();
-    },
-    navigateToDay(daysOffset) {
-      const date = new Date(this.currentDate);
-      date.setDate(date.getDate() + daysOffset);
-      const dateString = this.formatDateKey(date);
-      this.$router.push(`/day/${dateString}`);
-    },
-    isActiveDay(daysOffset) {
-      return daysOffset === 0;
-    },
-    formatDayButton(daysOffset) {
-      const date = new Date(this.currentDate);
-      date.setDate(date.getDate() + daysOffset);
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(today.getDate() - 1);
-      
-      if (this.normalizeDate(date).getTime() === this.normalizeDate(today).getTime()) {
-        return 'Today';
-      }
-      if (this.normalizeDate(date).getTime() === this.normalizeDate(yesterday).getTime()) {
-        return this.isDesktop ? 'Yesterday' : 'Yest';
-      }
-      
-      if (this.isDesktop) {
-        // Full format for desktop
-        return date.toLocaleDateString('en-US', {
-          weekday: 'short',
-          month: 'numeric',
-          day: 'numeric'
-        });
-      } else {
-        // Very compact format for mobile
-        const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
-        const day = date.getDate();
-        
-        // Use format like "M4", "T5", "W6" for mobile
-        return `${weekday.charAt(0)}${day}`;
-      }
-    },
-    navigateMonth(monthsAgo) {
-      const date = new Date(this.currentDate);
-      date.setMonth(this.currentDate.getMonth() + monthsAgo);
-      const dateString = this.formatDateKey(date);
-      this.$router.push(`/day/${dateString}`);
-    },
-    goToToday() {
-      const today = new Date();
-      const dateString = this.formatDateKey(today);
-      this.$router.push(`/day/${dateString}`);
-    },
-    navigateWeeks(weeksAgo) {
-      const date = new Date(this.currentDate);
-      date.setDate(this.currentDate.getDate() + weeksAgo * 7);
-      const dateString = this.formatDateKey(date);
-      this.$router.push(`/day/${dateString}`);
-    }
+  })
+
+  saveUserHabits(userHabitsList)
+}
+
+function saveUserHabits(habitsList) {
+  const habitData = habitsList.map((habit) => ({
+    id: habit.id,
+    name: habit.name,
+    active: habit.active,
+    isDefault: habit.isDefault,
+  }))
+  localStorage.setItem('userHabits', JSON.stringify(habitData))
+}
+
+function saveHabits() {
+  localStorage.setItem('habits', JSON.stringify(habits.value))
+}
+
+function normalizeDate(date) {
+  const normalized = new Date(date)
+  normalized.setHours(0, 0, 0, 0)
+  return normalized
+}
+
+function formatDateKey(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Computed properties
+const currentDate = computed(() => {
+  const dateParam = route.params.date
+  const date = dateParam ? new Date(dateParam) : new Date()
+  return normalizeDate(date)
+})
+
+const dateKey = computed(() => formatDateKey(currentDate.value))
+
+const allHabits = computed(() => {
+  return [...defaultHabits.value, ...userHabits.value].filter(
+    (habit) => habit.active || hasCompletionHistory(habit.id),
+  )
+})
+
+const formatCurrentDate = computed(() => {
+  return currentDate.value.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+})
+
+const isFutureDate = computed(() => {
+  const today = normalizeDate(new Date())
+  return currentDate.value.getTime() > today.getTime()
+})
+
+const currentMonthYear = computed(() => {
+  return currentDate.value.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+  })
+})
+
+const weekOffsets = computed(() => {
+  const offsets = []
+  for (let i = -3; i <= 3; i++) {
+    offsets.push(i)
+  }
+  return offsets
+})
+
+// Event handlers
+function handleHabitAdded(habitName) {
+  userHabits.value.push({
+    id: habitName.toLowerCase().replace(/\s+/g, '-'),
+    name: habitName,
+    active: true,
+    isDefault: false,
+  })
+  saveUserHabits(userHabits.value)
+}
+
+function hasCompletionHistory(habitId) {
+  return habits.value[dateKey.value]?.includes(habitId) || false
+}
+
+function handleHabitEditStart(habit) {
+  selectedHabit.value = habit
+  showEditModal.value = true
+}
+
+function handleHabitEdit(updatedHabit) {
+  const index = userHabits.value.findIndex((h) => h.id === updatedHabit.id)
+  if (index !== -1) {
+    userHabits.value[index] = updatedHabit
+    saveUserHabits(userHabits.value)
   }
 }
+
+function handleHabitStop(habit) {
+  const index = userHabits.value.findIndex((h) => h.id === habit.id)
+  if (index !== -1) {
+    userHabits.value[index].active = false
+    saveUserHabits(userHabits.value)
+  }
+}
+
+function handleHabitDelete(habit) {
+  const index = userHabits.value.findIndex((h) => h.id === habit.id)
+  if (index !== -1) {
+    userHabits.value.splice(index, 1)
+    saveUserHabits(userHabits.value)
+  }
+}
+
+function isHabitCompleted(habitId) {
+  return habits.value[dateKey.value]?.includes(habitId) || false
+}
+
+function toggleHabit(habitId) {
+  if (!habits.value[dateKey.value]) {
+    habits.value[dateKey.value] = []
+  }
+
+  const index = habits.value[dateKey.value].indexOf(habitId)
+  if (index === -1) {
+    habits.value[dateKey.value].push(habitId)
+  } else {
+    habits.value[dateKey.value].splice(index, 1)
+  }
+
+  saveHabits()
+}
+
+function navigateToDay(offset) {
+  const newDate = new Date(currentDate.value)
+  newDate.setDate(newDate.getDate() + offset)
+  router.push(`/day/${formatDateKey(newDate)}`)
+}
+
+function isActiveDay(offset) {
+  const date = new Date(currentDate.value)
+  date.setDate(date.getDate() + offset)
+  return formatDateKey(date) === dateKey.value
+}
+
+function formatDayButton(offset) {
+  const date = new Date(currentDate.value)
+  date.setDate(date.getDate() + offset)
+  return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })
+}
+
+function navigateMonth(delta) {
+  const newDate = new Date(currentDate.value)
+  newDate.setMonth(newDate.getMonth() + delta)
+  router.push(`/day/${formatDateKey(newDate)}`)
+}
+
+function goToToday() {
+  router.push(`/day/${formatDateKey(new Date())}`)
+}
+
+function navigateWeeks(delta) {
+  const newDate = new Date(currentDate.value)
+  newDate.setDate(newDate.getDate() + delta * 7)
+  router.push(`/day/${formatDateKey(newDate)}`)
+}
+
+// Lifecycle hooks
+onMounted(() => {
+  // Remove the resize event listener since we're not using windowWidth anymore
+})
+
+// Watch for route changes
+watch(
+  () => route.params.date,
+  () => {
+    habits.value = loadHabits()
+  },
+)
 </script>
 
 <style scoped>
@@ -721,9 +440,9 @@ export default {
 }
 
 .nav-buttons button.active {
-  background: #4CAF50;
+  background: #4caf50;
   color: white;
-  border-color: #4CAF50;
+  border-color: #4caf50;
 }
 
 .quick-nav {
@@ -772,7 +491,7 @@ export default {
 }
 
 .add-habit-btn {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
   border: none;
   padding: 10px 16px;
@@ -862,7 +581,7 @@ export default {
 }
 
 .habit-item:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .habit-item:active {
@@ -923,7 +642,7 @@ export default {
   cursor: not-allowed;
 }
 
-.habit-item input[type="checkbox"] {
+.habit-item input[type='checkbox'] {
   width: 24px;
   height: 24px;
   cursor: pointer;
@@ -950,7 +669,7 @@ export default {
     margin: -4px;
   }
 
-  .habit-item input[type="checkbox"] {
+  .habit-item input[type='checkbox'] {
     width: 20px;
     height: 20px;
   }

@@ -10,7 +10,7 @@ const router = createRouter({
         const today = new Date()
         const dateString = today.toISOString().split('T')[0]
         return `/day/${dateString}`
-      }
+      },
     },
     {
       path: '/day/:date',
@@ -19,7 +19,7 @@ const router = createRouter({
       beforeEnter: (to, from, next) => {
         const dateParam = to.params.date
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/
-        
+
         if (!dateRegex.test(dateParam)) {
           next('/')
           return
@@ -32,8 +32,8 @@ const router = createRouter({
         }
 
         next()
-      }
-    }
+      },
+    },
   ],
 })
 

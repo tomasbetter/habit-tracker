@@ -29,61 +29,69 @@ export default {
   props: {
     showMenu: {
       type: Boolean,
-      required: true
+      required: true,
     },
     habit: {
       type: Object,
-      required: true
-    }
+      required: true,
+    },
   },
   emits: ['close', 'edit', 'stop', 'delete'],
   setup(props, { emit }) {
-    const menuRef = ref(null);
+    const menuRef = ref(null)
 
-    const close = () => emit('close');
+    const close = () => emit('close')
 
     const handleStop = () => {
-      if (confirm(props.habit.active 
-        ? 'Are you sure you want to stop tracking this habit?' 
-        : 'Do you want to resume tracking this habit?')) {
-        emit('stop');
-        close();
+      if (
+        confirm(
+          props.habit.active
+            ? 'Are you sure you want to stop tracking this habit?'
+            : 'Do you want to resume tracking this habit?',
+        )
+      ) {
+        emit('stop')
+        close()
       }
-    };
+    }
 
     const handleDelete = () => {
-      if (confirm('Are you sure you want to delete this habit? This will remove all tracking history.')) {
-        emit('delete');
-        close();
+      if (
+        confirm(
+          'Are you sure you want to delete this habit? This will remove all tracking history.',
+        )
+      ) {
+        emit('delete')
+        close()
       }
-    };
+    }
 
     const handleClickOutside = (event) => {
-      if (!props.showMenu) return;
-      
-      const isClickOnButton = event.target.closest('.action-button');
-      const isClickInMenu = menuRef.value?.contains(event.target);
-      
+      if (!props.showMenu) return
+
+      const isClickOnButton = event.target.closest('.action-button')
+      const isClickInMenu = menuRef.value?.contains(event.target)
+
       if (!isClickOnButton && !isClickInMenu) {
-        close();
+        close()
       }
-    };
+    }
 
     onMounted(() => {
-      document.addEventListener('click', handleClickOutside);
-    });
+      document.addEventListener('click', handleClickOutside)
+    })
 
     onBeforeUnmount(() => {
-      document.removeEventListener('click', handleClickOutside);
-    });
+      document.removeEventListener('click', handleClickOutside)
+    })
 
     return {
       menuRef,
       close,
       handleStop,
-      handleDelete
-    };
-  }
+      handleDelete,
+    }
+  },
 }
 </script>
 
@@ -109,7 +117,7 @@ export default {
   right: 0;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   min-width: 180px;
   padding: 4px 0;
   z-index: 1000;
