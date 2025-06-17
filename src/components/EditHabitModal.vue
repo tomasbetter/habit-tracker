@@ -107,11 +107,8 @@ export default {
 <style scoped>
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background-color: rgb(0 0 0 / 50%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -125,7 +122,7 @@ export default {
   margin: 10px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
   animation: modal-appear 0.3s ease-out;
 }
 
@@ -134,6 +131,7 @@ export default {
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -204,7 +202,7 @@ export default {
 .form-group input:focus {
   outline: none;
   border-color: #4caf50;
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+  box-shadow: 0 0 0 2px rgb(76 175 80 / 20%);
 }
 
 .form-group input.error {
@@ -255,7 +253,7 @@ export default {
 }
 
 /* Tablet and desktop styles */
-@media (min-width: 768px) {
+@media (width >= 768px) {
   .modal {
     width: 90%;
     max-width: 500px;

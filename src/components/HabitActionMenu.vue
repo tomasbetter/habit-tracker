@@ -103,11 +103,8 @@ export default {
 
 .menu-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.1);
+  inset: 0;
+  background-color: rgb(0 0 0 / 10%);
   z-index: 999;
 }
 
@@ -117,7 +114,7 @@ export default {
   right: 0;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
   min-width: 180px;
   padding: 4px 0;
   z-index: 1000;
@@ -167,7 +164,7 @@ export default {
 }
 
 /* Tablet and desktop styles */
-@media (min-width: 768px) {
+@media (width >= 768px) {
   .menu-content {
     min-width: 150px;
     padding: 8px 0;

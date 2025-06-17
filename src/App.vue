@@ -24,7 +24,7 @@ header {
   color: white;
   padding: 0.75rem;
   text-align: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
 }
 
 header h1 {
@@ -39,7 +39,7 @@ main {
 }
 
 /* Tablet and desktop styles */
-@media (min-width: 768px) {
+@media (width >= 768px) {
   header {
     padding: 1rem;
   }
