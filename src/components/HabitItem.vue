@@ -52,7 +52,7 @@ defineEmits(['toggle', 'edit', 'stop', 'delete', 'toggle-menu', 'close-menu'])
 
 <style scoped>
 .habit-item {
-  padding: 12px;
+  padding: 8px;
   border: 1px solid #ddd;
   border-radius: 12px;
   background: white;
