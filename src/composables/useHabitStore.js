@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 export function useHabitStore() {
   const habits = ref(loadHabits())
   const userHabits = ref(loadUserHabits())
-  const defaultHabits = ref(loadDefaultHabits())
 
   // Load functions
   function loadHabits() {
@@ -31,35 +30,6 @@ export function useHabitStore() {
       : []
   }
 
-  function loadDefaultHabits() {
-    const stored = localStorage.getItem('defaultHabits')
-    if (stored) {
-      const defaultHabitsList = JSON.parse(stored)
-      if (defaultHabitsList.length > 0) {
-        migrateDefaultHabitsToUserHabits(defaultHabitsList)
-        localStorage.removeItem('defaultHabits')
-      }
-      return []
-    }
-    return []
-  }
-
-  function migrateDefaultHabitsToUserHabits(defaultHabits) {
-    const userHabitsList = loadUserHabits()
-    const existingIds = new Set(userHabitsList.map((h) => h.id))
-
-    defaultHabits.forEach((habit) => {
-      if (!existingIds.has(habit.id)) {
-        userHabitsList.push({
-          ...habit,
-          deletable: true,
-        })
-      }
-    })
-
-    saveUserHabits(userHabitsList)
-  }
-
   // Save functions
   function saveUserHabits(habitsList) {
     const habitData = habitsList.map((habit) => ({
@@ -77,7 +47,7 @@ export function useHabitStore() {
 
   // Computed properties
   const allHabits = computed(() => {
-    return [...defaultHabits.value, ...userHabits.value].filter(
+    return userHabits.value.filter(
       (habit) => habit.active || hasCompletionHistory(habit.id),
     )
   })
@@ -166,7 +136,6 @@ export function useHabitStore() {
     // State
     habits,
     userHabits,
-    defaultHabits,
     allHabits,
 
     // Utility functions
