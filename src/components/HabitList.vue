@@ -22,9 +22,7 @@
       />
     </div>
 
-    <div v-if="isFutureDate" class="future-date-message">
-      Cannot mark habits for future dates
-    </div>
+    <div v-if="isFutureDate" class="future-date-message">Cannot mark habits for future dates</div>
   </div>
 </template>
 
@@ -35,16 +33,16 @@ import HabitItem from './HabitItem.vue'
 const props = defineProps({
   habits: {
     type: Array,
-    required: true
+    required: true,
   },
   completedHabits: {
     type: Array,
-    default: () => []
+    default: () => [],
   },
   isFutureDate: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 })
 
 const emit = defineEmits(['add-habit', 'edit-habit', 'stop-habit', 'delete-habit', 'toggle-habit'])
@@ -154,4 +152,4 @@ function toggleMenu(habitId) {
     padding: 8px 16px;
   }
 }
-</style> 
+</style>

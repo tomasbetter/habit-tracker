@@ -40,8 +40,8 @@ import { useRouter } from 'vue-router'
 const props = defineProps({
   currentDate: {
     type: Date,
-    required: true
-  }
+    required: true,
+  },
 })
 
 const router = useRouter()
@@ -252,4 +252,4 @@ function navigateWeeks(delta) {
     text-align: left;
   }
 }
-</style> 
+</style>

@@ -168,7 +168,7 @@ export function useHabitStore() {
     userHabits,
     defaultHabits,
     allHabits,
-    
+
     // Utility functions
     normalizeDate,
     formatDateKey,
@@ -176,12 +176,12 @@ export function useHabitStore() {
     isHabitCompleted,
     toggleHabit,
     getCompletedHabits,
-    
+
     // Habit management
     addHabit,
     updateHabit,
     stopHabit,
     deleteHabit,
-    refreshHabits
+    refreshHabits,
   }
-} 
+}

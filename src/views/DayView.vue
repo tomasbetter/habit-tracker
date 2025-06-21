@@ -1,7 +1,7 @@
 <template>
   <div class="day-view">
     <DayNavigation :current-date="currentDate" />
-    
+
     <HabitList
       :habits="allHabits"
       :completed-habits="completedHabits"
@@ -56,7 +56,7 @@ const {
   updateHabit,
   stopHabit,
   deleteHabit,
-  refreshHabits
+  refreshHabits,
 } = useHabitStore()
 
 // Local state

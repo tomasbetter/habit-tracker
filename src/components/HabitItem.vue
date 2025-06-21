@@ -19,12 +19,7 @@
         @stop="$emit('stop', habit)"
         @delete="$emit('delete', habit)"
       >
-        <button
-          class="action-button"
-          @click="$emit('toggle-menu', habit.id)"
-        >
-          ⋮
-        </button>
+        <button class="action-button" @click="$emit('toggle-menu', habit.id)">⋮</button>
       </HabitActionMenu>
     </div>
   </div>
@@ -36,20 +31,20 @@ import HabitActionMenu from './HabitActionMenu.vue'
 defineProps({
   habit: {
     type: Object,
-    required: true
+    required: true,
   },
   isCompleted: {
     type: Boolean,
-    default: false
+    default: false,
   },
   isFutureDate: {
     type: Boolean,
-    default: false
+    default: false,
   },
   showMenu: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 })
 
 defineEmits(['toggle', 'edit', 'stop', 'delete', 'toggle-menu', 'close-menu'])
@@ -164,4 +159,4 @@ defineEmits(['toggle', 'edit', 'stop', 'delete', 'toggle-menu', 'close-menu'])
     height: 20px;
   }
 }
-</style> 
+</style>
