@@ -10,14 +10,15 @@
         v-for="habit in habits"
         :key="habit.id"
         :habit="habit"
-        :is-completed="isHabitCompleted(habit.id)"
+        :is-completed="completedHabits.includes(habit.id)"
         :is-future-date="isFutureDate"
         :show-menu="showMenuForHabit === habit.id"
-        @toggle="toggleHabit"
-        @edit="handleHabitEditStart"
-        @stop="handleHabitStop"
-        @delete="handleHabitDelete"
-        @toggle-menu="toggleMenu"
+        @toggle="$emit('toggle-habit', $event)"
+        @edit="$emit('edit-habit', $event)"
+        @stop="$emit('stop-habit', $event)"
+        @resume="$emit('resume-habit', $event)"
+        @delete="$emit('delete-habit', $event)"
+        @toggle-menu="showMenuForHabit = showMenuForHabit === $event ? null : $event"
         @close-menu="showMenuForHabit = null"
       />
     </div>
@@ -30,48 +31,15 @@
 import { ref } from 'vue'
 import HabitItem from './HabitItem.vue'
 
-const props = defineProps({
-  habits: {
-    type: Array,
-    required: true,
-  },
-  completedHabits: {
-    type: Array,
-    default: () => [],
-  },
-  isFutureDate: {
-    type: Boolean,
-    default: false,
-  },
+defineProps({
+  habits: { type: Array, required: true },
+  completedHabits: { type: Array, default: () => [] },
+  isFutureDate: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['add-habit', 'edit-habit', 'stop-habit', 'delete-habit', 'toggle-habit'])
+defineEmits(['add-habit', 'edit-habit', 'stop-habit', 'resume-habit', 'delete-habit', 'toggle-habit'])
 
 const showMenuForHabit = ref(null)
-
-function isHabitCompleted(habitId) {
-  return props.completedHabits.includes(habitId)
-}
-
-function toggleHabit(habitId) {
-  emit('toggle-habit', habitId)
-}
-
-function handleHabitEditStart(habit) {
-  emit('edit-habit', habit)
-}
-
-function handleHabitStop(habit) {
-  emit('stop-habit', habit)
-}
-
-function handleHabitDelete(habit) {
-  emit('delete-habit', habit)
-}
-
-function toggleMenu(habitId) {
-  showMenuForHabit.value = showMenuForHabit.value === habitId ? null : habitId
-}
 </script>
 
 <style scoped>

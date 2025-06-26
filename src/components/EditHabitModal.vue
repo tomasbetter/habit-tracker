@@ -6,28 +6,26 @@
         <button class="close-button" @click="closeModal">&times;</button>
       </div>
 
-      <div class="modal-body">
-        <form @submit.prevent="handleSubmit">
-          <div class="form-group">
-            <label for="habitName">Habit Name</label>
-            <input
-              type="text"
-              id="habitName"
-              v-model="habitName"
-              ref="habitNameInput"
-              :class="{ error: error }"
-              placeholder="Enter habit name"
-              @input="error = ''"
-            />
-            <div v-if="error" class="error-message">{{ error }}</div>
-          </div>
+      <form @submit.prevent="handleSubmit" class="modal-body">
+        <div class="form-group">
+          <label for="habitName">Habit Name</label>
+          <input
+            type="text"
+            id="habitName"
+            v-model="habitName"
+            ref="habitNameInput"
+            :class="{ error }"
+            :placeholder="habit?.name || 'Enter habit name'"
+            @input="error = ''"
+          />
+          <div v-if="error" class="error-message">{{ error }}</div>
+        </div>
 
-          <div class="modal-footer">
-            <button type="button" class="btn-secondary" @click="closeModal">Cancel</button>
-            <button type="submit" class="btn-primary">Save Changes</button>
-          </div>
-        </form>
-      </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" @click="closeModal">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
     </div>
   </div>
 </template>
@@ -38,18 +36,9 @@ import { ref, watch, nextTick } from 'vue'
 export default {
   name: 'EditHabitModal',
   props: {
-    modelValue: {
-      type: Boolean,
-      required: true,
-    },
-    habit: {
-      type: Object,
-      required: true,
-    },
-    existingHabits: {
-      type: Array,
-      required: true,
-    },
+    modelValue: Boolean,
+    habit: Object,
+    existingHabits: Array,
   },
   emits: ['update:modelValue', 'habit-updated'],
   setup(props, { emit }) {
@@ -57,33 +46,27 @@ export default {
     const error = ref('')
     const habitNameInput = ref(null)
 
-    watch(
-      () => props.modelValue,
-      (newVal) => {
-        if (newVal) {
-          habitName.value = props.habit.name
-          nextTick(() => {
-            habitNameInput.value?.focus()
-          })
-        }
-      },
-    )
+    watch(() => props.modelValue, (newVal) => {
+      if (newVal) {
+        habitName.value = props.habit.name
+        nextTick(() => habitNameInput.value?.focus())
+      }
+    })
 
     const closeModal = () => {
-      habitName.value = ''
-      error.value = ''
+      habitName.value = error.value = ''
       emit('update:modelValue', false)
     }
 
     const handleSubmit = () => {
       const name = habitName.value.trim()
-
+      
       if (!name) {
         error.value = 'Habit name is required'
         return
       }
 
-      const otherHabits = props.existingHabits.filter((h) => h !== props.habit.name)
+      const otherHabits = props.existingHabits.filter(h => h !== props.habit.name)
       if (otherHabits.includes(name)) {
         error.value = 'This habit name already exists'
         return
@@ -93,13 +76,7 @@ export default {
       closeModal()
     }
 
-    return {
-      habitName,
-      error,
-      habitNameInput,
-      closeModal,
-      handleSubmit,
-    }
+    return { habitName, error, habitNameInput, closeModal, handleSubmit }
   },
 }
 </script>
@@ -112,7 +89,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 1002;
 }
 
 .modal {
@@ -127,15 +104,8 @@ export default {
 }
 
 @keyframes modal-appear {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .modal-header {
@@ -171,9 +141,7 @@ export default {
   touch-action: manipulation;
 }
 
-.close-button:hover {
-  color: #333;
-}
+.close-button:hover { color: #333; }
 
 .modal-body {
   padding: 1rem;
@@ -205,9 +173,7 @@ export default {
   box-shadow: 0 0 0 2px rgb(76 175 80 / 20%);
 }
 
-.form-group input.error {
-  border-color: #dc3545;
-}
+.form-group input.error { border-color: #dc3545; }
 
 .error-message {
   color: #dc3545;
@@ -239,20 +205,15 @@ export default {
   color: white;
 }
 
-.btn-primary:hover {
-  background-color: #45a049;
-}
+.btn-primary:hover { background-color: #45a049; }
 
 .btn-secondary {
   background-color: #f5f5f5;
   color: #333;
 }
 
-.btn-secondary:hover {
-  background-color: #e9e9e9;
-}
+.btn-secondary:hover { background-color: #e9e9e9; }
 
-/* Tablet and desktop styles */
 @media (width >= 768px) {
   .modal {
     width: 90%;
@@ -264,9 +225,7 @@ export default {
     padding: 1rem;
   }
 
-  .modal-header h2 {
-    font-size: 1.5rem;
-  }
+  .modal-header h2 { font-size: 1.5rem; }
 
   .modal-footer {
     flex-direction: row;

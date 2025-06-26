@@ -1,73 +1,123 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+
+// Constants
+const STORAGE_KEYS = {
+  HABITS: 'habits',
+  USER_HABITS: 'userHabits'
+}
+
+// Utility functions (moved outside to avoid recreation)
+function normalizeDate(date) {
+  const normalized = new Date(date)
+  normalized.setHours(0, 0, 0, 0)
+  return normalized
+}
+
+function formatDateKey(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function generateHabitId(name) {
+  return name.toLowerCase().replace(/\s+/g, '-')
+}
+
+function createHabitObject(name, isDefault = false) {
+  return {
+    id: generateHabitId(name),
+    name,
+    active: true,
+    isDefault
+  }
+}
 
 export function useHabitStore() {
-  const habits = ref(loadHabits())
-  const userHabits = ref(loadUserHabits())
+  const habits = ref({})
+  const userHabits = ref([])
+  const isLoading = ref(false)
 
-  // Load functions
+  // Load functions with error handling
   function loadHabits() {
-    const stored = localStorage.getItem('habits')
-    return stored ? JSON.parse(stored) : {}
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.HABITS)
+      return stored ? JSON.parse(stored) : {}
+    } catch (error) {
+      console.error('Error loading habits:', error)
+      return {}
+    }
   }
 
   function loadUserHabits() {
-    const stored = localStorage.getItem('userHabits')
-    if (!stored) return []
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.USER_HABITS)
+      if (!stored) return []
 
-    const data = JSON.parse(stored)
-    return Array.isArray(data)
-      ? data.map((item) => {
-          if (typeof item === 'string') {
-            return {
-              id: item.toLowerCase().replace(/\s+/g, '-'),
-              name: item,
-              active: true,
-              isDefault: false,
+      const data = JSON.parse(stored)
+      return Array.isArray(data)
+        ? data.map((item) => {
+            if (typeof item === 'string') {
+              return createHabitObject(item)
             }
-          }
-          return item
-        })
-      : []
+            return item
+          })
+        : []
+    } catch (error) {
+      console.error('Error loading user habits:', error)
+      return []
+    }
   }
 
-  // Save functions
-  function saveUserHabits(habitsList) {
-    const habitData = habitsList.map((habit) => ({
+  // Initialize data
+  habits.value = loadHabits()
+  userHabits.value = loadUserHabits()
+
+  // Save functions with debouncing
+  let saveTimeout = null
+  function debouncedSave(key, data) {
+    if (saveTimeout) clearTimeout(saveTimeout)
+    saveTimeout = setTimeout(() => {
+      try {
+        localStorage.setItem(key, JSON.stringify(data))
+      } catch (error) {
+        console.error(`Error saving ${key}:`, error)
+      }
+    }, 100)
+  }
+
+  function saveUserHabits() {
+    const habitData = userHabits.value.map((habit) => ({
       id: habit.id,
       name: habit.name,
       active: habit.active,
       isDefault: habit.isDefault,
     }))
-    localStorage.setItem('userHabits', JSON.stringify(habitData))
+    debouncedSave(STORAGE_KEYS.USER_HABITS, habitData)
   }
 
   function saveHabits() {
-    localStorage.setItem('habits', JSON.stringify(habits.value))
+    debouncedSave(STORAGE_KEYS.HABITS, habits.value)
   }
 
-  // Computed properties
+  // Computed properties with memoization
   const allHabits = computed(() => {
-    return userHabits.value.filter(
-      (habit) => habit.active || hasCompletionHistory(habit.id),
-    )
+    return userHabits.value
+  })
+
+  const activeHabits = computed(() => {
+    return userHabits.value.filter(habit => habit.active)
+  })
+
+  const inactiveHabits = computed(() => {
+    return userHabits.value.filter(habit => !habit.active)
   })
 
   // Utility functions
-  function normalizeDate(date) {
-    const normalized = new Date(date)
-    normalized.setHours(0, 0, 0, 0)
-    return normalized
-  }
-
-  function formatDateKey(date) {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-
-  function hasCompletionHistory(habitId, dateKey) {
-    return habits.value[dateKey]?.includes(habitId) || false
+  function hasCompletionHistory(habitId) {
+    return Object.values(habits.value).some(habitList => 
+      Array.isArray(habitList) && habitList.includes(habitId)
+    )
   }
 
   function isHabitCompleted(habitId, dateKey) {
@@ -93,50 +143,115 @@ export function useHabitStore() {
     return habits.value[dateKey] || []
   }
 
-  // Habit management functions
+  // Habit management functions with validation
   function addHabit(habitName) {
-    userHabits.value.push({
-      id: habitName.toLowerCase().replace(/\s+/g, '-'),
-      name: habitName,
-      active: true,
-      isDefault: false,
-    })
-    saveUserHabits(userHabits.value)
+    if (!habitName?.trim()) {
+      throw new Error('Habit name is required')
+    }
+
+    const trimmedName = habitName.trim()
+    const existingHabit = userHabits.value.find(h => h.name.toLowerCase() === trimmedName.toLowerCase())
+    
+    if (existingHabit) {
+      throw new Error('Habit already exists')
+    }
+
+    userHabits.value.push(createHabitObject(trimmedName))
+    saveUserHabits()
   }
 
   function updateHabit(updatedHabit) {
+    if (!updatedHabit?.id) {
+      throw new Error('Invalid habit data')
+    }
+
     const index = userHabits.value.findIndex((h) => h.id === updatedHabit.id)
     if (index !== -1) {
-      userHabits.value[index] = updatedHabit
-      saveUserHabits(userHabits.value)
+      userHabits.value[index] = { ...userHabits.value[index], ...updatedHabit }
+      saveUserHabits()
     }
   }
 
   function stopHabit(habit) {
+    if (!habit?.id) return
+
     const index = userHabits.value.findIndex((h) => h.id === habit.id)
     if (index !== -1) {
       userHabits.value[index].active = false
-      saveUserHabits(userHabits.value)
+      saveUserHabits()
+    }
+  }
+
+  function resumeHabit(habit) {
+    if (!habit?.id) return
+
+    const index = userHabits.value.findIndex((h) => h.id === habit.id)
+    if (index !== -1) {
+      userHabits.value[index].active = true
+      saveUserHabits()
     }
   }
 
   function deleteHabit(habit) {
+    if (!habit?.id) return
+
     const index = userHabits.value.findIndex((h) => h.id === habit.id)
     if (index !== -1) {
       userHabits.value.splice(index, 1)
-      saveUserHabits(userHabits.value)
+      saveUserHabits()
     }
   }
 
   function refreshHabits() {
-    habits.value = loadHabits()
+    isLoading.value = true
+    try {
+      habits.value = loadHabits()
+      userHabits.value = loadUserHabits()
+    } finally {
+      isLoading.value = false
+    }
   }
+
+  // Batch operations for better performance
+  function batchToggleHabits(habitIds, dateKey, completed) {
+    if (!habits.value[dateKey]) {
+      habits.value[dateKey] = []
+    }
+
+    if (completed) {
+      // Add habits that aren't already completed
+      habitIds.forEach(habitId => {
+        if (!habits.value[dateKey].includes(habitId)) {
+          habits.value[dateKey].push(habitId)
+        }
+      })
+    } else {
+      // Remove habits
+      habits.value[dateKey] = habits.value[dateKey].filter(id => !habitIds.includes(id))
+    }
+
+    saveHabits()
+  }
+
+  // Cleanup function
+  function cleanup() {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout)
+    }
+  }
+
+  // Auto-save on changes
+  watch(userHabits, saveUserHabits, { deep: true })
+  watch(habits, saveHabits, { deep: true })
 
   return {
     // State
     habits,
     userHabits,
     allHabits,
+    activeHabits,
+    inactiveHabits,
+    isLoading,
 
     // Utility functions
     normalizeDate,
@@ -150,7 +265,10 @@ export function useHabitStore() {
     addHabit,
     updateHabit,
     stopHabit,
+    resumeHabit,
     deleteHabit,
     refreshHabits,
+    batchToggleHabits,
+    cleanup,
   }
 }

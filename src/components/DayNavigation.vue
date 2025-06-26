@@ -2,34 +2,31 @@
   <div class="day-navigation">
     <!-- Month navigation -->
     <div class="month-navigation">
-      <button @click="navigateMonth(-1)" class="month-nav-btn">‹</button>
+      <button @click="navigateMonth(-1)" class="nav-btn month-nav">‹</button>
       <span class="month-display">{{ currentMonthYear }}</span>
-      <button @click="navigateMonth(1)" class="month-nav-btn">›</button>
+      <button @click="navigateMonth(1)" class="nav-btn month-nav">›</button>
     </div>
 
-    <!-- Week navigation around current date -->
+    <!-- Week navigation -->
     <div class="nav-buttons">
       <button
         v-for="offset in weekOffsets"
         :key="offset"
-        :class="{ active: isActiveDay(offset) }"
+        :class="['nav-btn', { active: isActiveDay(offset) }]"
         @click="navigateToDay(offset)"
-        :disabled="false"
       >
         {{ formatDayButton(offset) }}
       </button>
     </div>
 
-    <!-- Quick navigation options -->
+    <!-- Quick navigation -->
     <div class="quick-nav">
-      <button @click="goToToday" class="quick-nav-btn">Today</button>
-      <button @click="navigateWeeks(-1)" class="quick-nav-btn">← Week</button>
-      <button @click="navigateWeeks(1)" class="quick-nav-btn">Week →</button>
+      <button @click="goToToday" class="nav-btn quick-nav-btn">Today</button>
+      <button @click="navigateWeeks(-1)" class="nav-btn quick-nav-btn">← Week</button>
+      <button @click="navigateWeeks(1)" class="nav-btn quick-nav-btn">Week →</button>
     </div>
 
-    <div class="current-date">
-      {{ formatCurrentDate }}
-    </div>
+    <div class="current-date">{{ formatCurrentDate }}</div>
   </div>
 </template>
 
@@ -38,79 +35,60 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({
-  currentDate: {
-    type: Date,
-    required: true,
-  },
+  currentDate: { type: Date, required: true }
 })
 
 const router = useRouter()
 
 // Computed properties
-const formatCurrentDate = computed(() => {
-  return props.currentDate.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+const formatCurrentDate = computed(() => 
+  props.currentDate.toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   })
-})
+)
 
-const currentMonthYear = computed(() => {
-  return props.currentDate.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-  })
-})
+const currentMonthYear = computed(() => 
+  props.currentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+)
 
-const weekOffsets = computed(() => {
-  const offsets = []
-  for (let i = -3; i <= 3; i++) {
-    offsets.push(i)
-  }
-  return offsets
-})
+const weekOffsets = computed(() => Array.from({ length: 7 }, (_, i) => i - 3))
 
 // Utility functions
-function formatDateKey(date) {
+const formatDateKey = date => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
 
+const getDateWithOffset = offset => {
+  const date = new Date(props.currentDate)
+  date.setDate(date.getDate() + offset)
+  return date
+}
+
 // Navigation methods
-function navigateToDay(offset) {
-  const newDate = new Date(props.currentDate)
-  newDate.setDate(newDate.getDate() + offset)
+const navigateToDay = offset => {
+  const newDate = getDateWithOffset(offset)
   router.push(`/day/${formatDateKey(newDate)}`)
 }
 
-function isActiveDay(offset) {
-  const date = new Date(props.currentDate)
-  date.setDate(date.getDate() + offset)
-  return formatDateKey(date) === formatDateKey(props.currentDate)
-}
+const isActiveDay = offset => 
+  formatDateKey(getDateWithOffset(offset)) === formatDateKey(props.currentDate)
 
-function formatDayButton(offset) {
-  const date = new Date(props.currentDate)
-  date.setDate(date.getDate() + offset)
-  return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })
-}
+const formatDayButton = offset => 
+  getDateWithOffset(offset).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })
 
-function navigateMonth(delta) {
+const navigateMonth = delta => {
   const newDate = new Date(props.currentDate)
   newDate.setMonth(newDate.getMonth() + delta)
   router.push(`/day/${formatDateKey(newDate)}`)
 }
 
-function goToToday() {
-  router.push(`/day/${formatDateKey(new Date())}`)
-}
+const goToToday = () => router.push(`/day/${formatDateKey(new Date())}`)
 
-function navigateWeeks(delta) {
-  const newDate = new Date(props.currentDate)
-  newDate.setDate(newDate.getDate() + delta * 7)
+const navigateWeeks = delta => {
+  const newDate = getDateWithOffset(delta * 7)
   router.push(`/day/${formatDateKey(newDate)}`)
 }
 </script>
@@ -128,22 +106,31 @@ function navigateWeeks(delta) {
   margin-bottom: 15px;
 }
 
-.month-nav-btn {
-  background: #f0f0f0;
+.nav-btn {
   border: 1px solid #ddd;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.nav-btn:hover {
+  background: #f5f5f5;
+}
+
+.month-nav {
+  background: #f0f0f0;
   border-radius: 50%;
   width: 36px;
   height: 36px;
   font-size: 1.4rem;
   color: #666;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
 }
 
-.month-nav-btn:hover {
+.month-nav:hover {
   background: #e0e0e0;
   color: #333;
 }
@@ -173,14 +160,9 @@ function navigateWeeks(delta) {
   display: none;
 }
 
-.nav-buttons button {
+.nav-buttons .nav-btn {
   padding: 8px 4px;
-  border: 1px solid #ddd;
-  border-radius: 16px;
-  background: white;
-  cursor: pointer;
   white-space: nowrap;
-  transition: all 0.3s ease;
   font-size: 0.75rem;
   min-height: 36px;
   flex: 1;
@@ -190,11 +172,7 @@ function navigateWeeks(delta) {
   overflow: hidden;
 }
 
-.nav-buttons button:hover {
-  background: #f5f5f5;
-}
-
-.nav-buttons button.active {
+.nav-buttons .nav-btn.active {
   background: #4caf50;
   color: white;
   border-color: #4caf50;
@@ -209,13 +187,9 @@ function navigateWeeks(delta) {
 
 .quick-nav-btn {
   background: #f8f8f8;
-  border: 1px solid #ddd;
-  border-radius: 16px;
   font-size: 0.85rem;
   color: #555;
-  cursor: pointer;
   padding: 6px 12px;
-  transition: all 0.2s ease;
 }
 
 .quick-nav-btn:hover {
@@ -238,7 +212,7 @@ function navigateWeeks(delta) {
     justify-content: center;
   }
 
-  .nav-buttons button {
+  .nav-buttons .nav-btn {
     padding: 8px 16px;
     font-size: 1rem;
     flex: none;

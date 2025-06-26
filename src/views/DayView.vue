@@ -9,6 +9,7 @@
       @add-habit="showAddModal = true"
       @edit-habit="handleHabitEditStart"
       @stop-habit="handleHabitStop"
+      @resume-habit="handleHabitResume"
       @delete-habit="handleHabitDelete"
       @toggle-habit="handleHabitToggle"
     />
@@ -43,6 +44,14 @@ import AddHabitModal from '../components/AddHabitModal.vue'
 import EditHabitModal from '../components/EditHabitModal.vue'
 import { useHabitStore } from '../composables/useHabitStore'
 
+// Props
+const props = defineProps({
+  date: {
+    type: String,
+    required: true
+  }
+})
+
 const route = useRoute()
 
 // Use the habit store composable
@@ -55,6 +64,7 @@ const {
   addHabit,
   updateHabit,
   stopHabit,
+  resumeHabit,
   deleteHabit,
   refreshHabits,
 } = useHabitStore()
@@ -64,11 +74,9 @@ const showAddModal = ref(false)
 const showEditModal = ref(false)
 const selectedHabit = ref(null)
 
-// Computed properties
+// Computed properties - now using the prop directly
 const currentDate = computed(() => {
-  const dateParam = route.params.date
-  const date = dateParam ? new Date(dateParam) : new Date()
-  return normalizeDate(date)
+  return normalizeDate(new Date(props.date))
 })
 
 const dateKey = computed(() => formatDateKey(currentDate.value))
@@ -96,6 +104,10 @@ function handleHabitEdit(updatedHabit) {
 
 function handleHabitStop(habit) {
   stopHabit(habit)
+}
+
+function handleHabitResume(habit) {
+  resumeHabit(habit)
 }
 
 function handleHabitDelete(habit) {
